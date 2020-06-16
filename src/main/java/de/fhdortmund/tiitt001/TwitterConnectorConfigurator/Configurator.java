@@ -32,39 +32,38 @@ public class Configurator {
                 .put("twitter.oauth.consumerKey", envProps.getProperty("twitter.oauth.consumerKey"));
     }
 
-    public void init(Set<String> hashtags) {
-        init(hashtags, 0);
+    private boolean hasTwitterConnector() {
+        for (int i = 0; i < 50; i++) {
+            try {
+                // Prüfen ob der Connector schon definiert wurde
+                HttpResponse<String> resp = Unirest.get(envProps.getProperty("connect.instance") + "/connectors/" + envProps.getProperty("twitter.connector.name") + "/status")
+                        .asString();
+
+                return resp.isSuccess();
+            } catch (Exception e) {
+                System.out.println("[TI]: Fehler bei Aufbau der Connectoren. Versuche erneut (" + i + ")");
+                try {
+                    Thread.sleep(1000 * i);
+                } catch (InterruptedException ignored) {
+                }
+            }
+        }
+        throw new RuntimeException("Can't create Twitter Connector");
     }
 
-    private void init(Set<String> hashtags, int retryCount) {
-        if (retryCount > 10) {
-            throw new RuntimeException("Can't connect to connect instance. Die...");
-        }
-        try {
-            // Prüfen ob der Connector schon definiert wurde
-            HttpResponse<String> resp = Unirest.get(envProps.getProperty("connect.instance") + "/connectors/" + envProps.getProperty("twitter.connector.name") + "/status")
+    public void init(Set<String> hashtags) {
+        if (hasTwitterConnector()) {
+            // Gibt es einen Connector? (Aktualisieren)
+            refresh(hashtags);
+        } else {
+            JSONObject body = new JSONObject()
+                    .put("config", getConfiguration(hashtags))
+                    .put("name", envProps.getProperty("twitter.connector.name"));
+
+            Unirest.post(envProps.getProperty("connect.instance") + "/connectors")
+                    .header("Content-Type", "application/json")
+                    .body(body)
                     .asString();
-
-            if (resp.isSuccess()) {
-                refresh(hashtags);
-            } else {
-                JSONObject body = new JSONObject()
-                        .put("config", getConfiguration(hashtags))
-                        .put("name", envProps.getProperty("twitter.connector.name"));
-
-                Unirest.post(envProps.getProperty("connect.instance") + "/connectors")
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                        .asString();
-            }
-        } catch (Exception e) {
-            // Connect Instanz steht nicht zur Verfügung. Warte...
-            System.out.println("[TI]: Fehler bei Aufbau der Connectoren. Versuche erneut ("+retryCount+")");
-            try {
-                Thread.sleep(1000*retryCount);
-            } catch (InterruptedException ignored) {
-            }
-            init(hashtags, ++retryCount);
         }
     }
 
