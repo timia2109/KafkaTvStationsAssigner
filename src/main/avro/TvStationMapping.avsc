@@ -1,0 +1,11 @@
+{
+    "namespace": "de.fhdortmund.tiitt001.KafkaTvStationsAssigner",
+    "type": "record",
+    "name": "TvStationTweet",
+    "fields": [
+        {
+            "name": "tv_station",
+            "type": "string"
+        }
+    ]
+}
