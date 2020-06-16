@@ -46,6 +46,7 @@ public class Configurator {
                     .put("name", envProps.getProperty("twitter.connector.name"));
 
             Unirest.post(envProps.getProperty("connect.instance") + "/connectors")
+                    .header("Content-Type", "application/json")
                     .body(body)
                     .asString();
         }
@@ -53,8 +54,9 @@ public class Configurator {
 
     public void refresh(Set<String> hashtags) {
         Unirest.put(envProps.getProperty("connect.instance")+"/connectors/"+envProps.getProperty("twitter.connector.name")+"/config")
+                .header("Content-Type", "application/json")
                 .body(getConfiguration(hashtags))
-                .asStringAsync();
+                .asString();
     }
 
 }
