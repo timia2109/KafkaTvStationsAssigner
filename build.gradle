@@ -51,7 +51,7 @@ test {
 }
 
 task run(type: JavaExec) {
-    main = 'de.fhdortmund.tiitt001.KafkaTvStationAssigner.Assigner'
+    main = 'de.fhdortmund.core.Starter'
     classpath = sourceSets.main.runtimeClasspath
     args = ['configuration/dev.properties']
 }
@@ -60,7 +60,7 @@ jar {
     manifest {
         attributes(
                 'Class-Path': configurations.compileClasspath.collect { it.getName() }.join(' '),
-                'Main-Class': 'de.fhdortmund.tiitt001.KafkaTvStationAssigner.Assigner'
+                'Main-Class': 'de.fhdortmund.core.Starter'
         )
     }
 }
