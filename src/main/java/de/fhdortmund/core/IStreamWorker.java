@@ -15,4 +15,11 @@ public interface IStreamWorker {
      * @param envProps Anwendungseinstellungen
      */
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps);
+
+    /**
+     * Gibt die von dieser Instanz benötigten Topics zurück
+     * @param envProps Anwendungseinstellungen
+     * @return Liste mit Topics
+     */
+    public String[] getRequiredTopics(Properties envProps);
 }

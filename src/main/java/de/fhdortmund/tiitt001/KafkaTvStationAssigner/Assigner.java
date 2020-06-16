@@ -3,6 +3,7 @@ package de.fhdortmund.tiitt001.KafkaTvStationAssigner;
 import com.github.jcustenborder.kafka.connect.twitter.HashtagEntity;
 import com.github.jcustenborder.kafka.connect.twitter.Status;
 import de.fhdortmund.core.IStreamWorker;
+import de.fhdortmund.olhem002.TvStationAliases.TvStationAlias;
 import de.fhdortmund.tiitt001.KafkaTvStationsAssigner.TvStationTweet;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
@@ -11,8 +12,12 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Transformer;
+import org.apache.kafka.streams.processor.ProcessorContext;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -20,14 +25,37 @@ import java.util.concurrent.ConcurrentHashMap;
  * prüft diese gegen die definierten Aliase
  * und schiebt die weiter in einen anderen Stream
  */
-public class Assigner implements IStreamWorker {
+public class Assigner implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationTweet>> {
 
-    /** Serienhashtag => Senderhashtag */
+    /**
+     * Serienhashtag => Senderhashtag
+     */
     private ConcurrentHashMap<String, String> mappedHashtags;
 
-    public KeyValue<String, TvStationTweet> handleTweet(String _key, Status status) {
+    /**
+     * Handler für Aliase, welche von einem anderen Modul erkannt werden
+     * @param key Key des Aliases
+     * @param alias Wertinformationen zum Alias
+     */
+    public void handleAlias(String key, TvStationAlias alias) {
+        if (alias.getIsValid()) {
+            mappedHashtags.put(key, alias.getTvStation());
+        }
+        else {
+            mappedHashtags.remove(key);
+        }
+    }
+
+    /**
+     * Transformiert einen Tweet
+     * @param key Immer null
+     * @param value Tweet
+     * @return
+     */
+    @Override
+    public KeyValue<String, TvStationTweet> transform(String key, Status value) {
         HashtagEntity detectedHashtag = null;
-        List<HashtagEntity> hashtags = status.getHashtagEntities();
+        List<HashtagEntity> hashtags = value.getHashtagEntities();
 
         if (hashtags != null) {
             for (HashtagEntity hashtag : hashtags) {
@@ -41,8 +69,8 @@ public class Assigner implements IStreamWorker {
         if (detectedHashtag != null) {
             // Relevanten Tweet gefunden! :)
             TvStationTweet message = new TvStationTweet();
-            message.setContent(status.getText());
-            message.setCreatedAt(status.getCreatedAt());
+            message.setContent(value.getText());
+            message.setCreatedAt(value.getCreatedAt());
             message.setTvStation(mappedHashtags.get(detectedHashtag.getText()));
 
             return new KeyValue<>("", message);
@@ -52,17 +80,25 @@ public class Assigner implements IStreamWorker {
     }
 
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
-
         ConfigTools configTools = new ConfigTools(envProps);
 
         mappedHashtags = new ConcurrentHashMap<>(configTools.getDefaultAliases());
-        String outputTopicName = envProps.getProperty("output.topic.name");
+        String outputTopicName = envProps.getProperty("tvstations.topic.name");
 
-        KStream<String, Status> rawMovies = streamsBuilder
-                .stream(envProps.getProperty("input.topic.name"));
+        KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
+        tweetsStream.transform(()->this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
 
-        rawMovies.map(this::handleTweet)
-                .to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
+        KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
+        aliasesStream.foreach(this::handleAlias);
+    }
+
+    @Override
+    public String[] getRequiredTopics(Properties envProps) {
+        return new String[]{
+                envProps.getProperty("tweets.topic.name"),
+                envProps.getProperty("tvstations.topic.name"),
+                envProps.getProperty("tvstationaliases.topic.name")
+        };
     }
 
     private SpecificAvroSerde<TvStationTweet> moduleSerdes(Properties envProps) {
@@ -75,4 +111,10 @@ public class Assigner implements IStreamWorker {
         avroSerde.configure(serdeConfig, false);
         return avroSerde;
     }
+
+    @Override
+    public void init(ProcessorContext context) { }
+
+    @Override
+    public void close() { }
 }

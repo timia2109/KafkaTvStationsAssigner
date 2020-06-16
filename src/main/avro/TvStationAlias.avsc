@@ -1,0 +1,15 @@
+{
+     "namespace": "de.fhdortmund.olhem002.TvStationAliases",
+     "type": "record",
+     "name": "TvStationAlias",
+     "fields": [
+         {
+             "name": "tv_station",
+             "type": "string"
+         },
+         {
+             "name": "isValid",
+             "type": "boolean"
+         }
+     ]
+ }
