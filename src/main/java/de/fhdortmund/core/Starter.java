@@ -106,6 +106,7 @@ public class Starter {
             throw new IllegalArgumentException("This program takes one argument: the path to an environment configuration file.");
         }
 
+        System.out.println("Run Module: "+System.getenv("MODULE"));
         Class<?> workerClass = Class.forName(System.getenv("MODULE"));
         Object instance = workerClass.newInstance();
 
