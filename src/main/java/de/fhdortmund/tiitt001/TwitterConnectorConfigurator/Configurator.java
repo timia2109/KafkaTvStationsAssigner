@@ -37,7 +37,7 @@ public class Configurator {
     }
 
     private void init(Set<String> hashtags, int retryCount) {
-        if (retryCount > 5) {
+        if (retryCount > 10) {
             throw new RuntimeException("Can't connect to connect instance. Die...");
         }
         try {
@@ -59,8 +59,9 @@ public class Configurator {
             }
         } catch (Exception e) {
             // Connect Instanz steht nicht zur Verfügung. Warte...
+            System.out.println("[TI]: Fehler bei Aufbau der Connectoren. Versuche erneut ("+retryCount+")");
             try {
-                Thread.sleep(1000);
+                Thread.sleep(1000*retryCount);
             } catch (InterruptedException ignored) {
             }
             init(hashtags, ++retryCount);
