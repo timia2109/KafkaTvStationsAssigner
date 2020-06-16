@@ -41,14 +41,6 @@ dependencies {
     implementation 'com.konghq:unirest-java:3.7.02'
 }
 
-test {
-    testLogging {
-        outputs.upToDateWhen { false }
-        showStandardStreams = true
-        exceptionFormat = 'full'
-    }
-}
-
 task run(type: JavaExec) {
     main = 'de.fhdortmund.core.Starter'
     classpath = sourceSets.main.runtimeClasspath
