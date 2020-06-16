@@ -33,27 +33,42 @@ public class Configurator {
     }
 
     public void init(Set<String> hashtags) {
-        // Prüfen ob der Connector schon definiert wurde
-        HttpResponse<String> resp = Unirest.get(envProps.getProperty("connect.instance")+"/connectors/"+envProps.getProperty("twitter.connector.name")+"/status")
-                .asString();
+        init(hashtags, 0);
+    }
 
-        if (resp.isSuccess()) {
-            refresh(hashtags);
+    private void init(Set<String> hashtags, int retryCount) {
+        if (retryCount > 5) {
+            throw new RuntimeException("Can't connect to connect instance. Die...");
         }
-        else {
-            JSONObject body = new JSONObject()
-                    .put("config", getConfiguration(hashtags))
-                    .put("name", envProps.getProperty("twitter.connector.name"));
-
-            Unirest.post(envProps.getProperty("connect.instance") + "/connectors")
-                    .header("Content-Type", "application/json")
-                    .body(body)
+        try {
+            // Prüfen ob der Connector schon definiert wurde
+            HttpResponse<String> resp = Unirest.get(envProps.getProperty("connect.instance") + "/connectors/" + envProps.getProperty("twitter.connector.name") + "/status")
                     .asString();
+
+            if (resp.isSuccess()) {
+                refresh(hashtags);
+            } else {
+                JSONObject body = new JSONObject()
+                        .put("config", getConfiguration(hashtags))
+                        .put("name", envProps.getProperty("twitter.connector.name"));
+
+                Unirest.post(envProps.getProperty("connect.instance") + "/connectors")
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .asString();
+            }
+        } catch (Exception e) {
+            // Connect Instanz steht nicht zur Verfügung. Warte...
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
+            init(hashtags, ++retryCount);
         }
     }
 
     public void refresh(Set<String> hashtags) {
-        Unirest.put(envProps.getProperty("connect.instance")+"/connectors/"+envProps.getProperty("twitter.connector.name")+"/config")
+        Unirest.put(envProps.getProperty("connect.instance") + "/connectors/" + envProps.getProperty("twitter.connector.name") + "/config")
                 .header("Content-Type", "application/json")
                 .body(getConfiguration(hashtags))
                 .asString();
