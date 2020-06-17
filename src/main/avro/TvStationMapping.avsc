@@ -12,6 +12,10 @@
             "type": "string"
         },
         {
+            "name": "username",
+            "type": "string"
+        },
+        {
             "name": "createdAt",
             "type": {
                               "connect.doc": "Return the created_at",

@@ -116,7 +116,6 @@ public class Starter {
 
         IStreamWorker streamWorker = (IStreamWorker) instance;
 
-
         Properties envProps = loadEnvProperties(args[0]);
         Properties streamProps = buildStreamsProperties(envProps);
         Topology topology = buildTopology(streamWorker, envProps);
@@ -128,6 +127,9 @@ public class Starter {
         Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
             @Override
             public void run() {
+                if (streamWorker instanceof IDisposable) {
+                    ((IDisposable) streamWorker).dispose();
+                }
                 streams.close();
                 latch.countDown();
             }

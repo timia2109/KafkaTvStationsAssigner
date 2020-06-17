@@ -72,6 +72,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
             message.setContent(value.getText());
             message.setCreatedAt(value.getCreatedAt());
             message.setTvStation(mappedHashtags.get(detectedHashtag.getText()));
+            message.setUsername(value.getUser().getName());
 
             return new KeyValue<>("", message);
         }
