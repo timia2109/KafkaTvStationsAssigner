@@ -2,8 +2,11 @@ package de.fhdortmund.tiitt001.mysql;
 
 import de.fhdortmund.core.IDisposable;
 import de.fhdortmund.core.IStreamWorker;
+import de.fhdortmund.tiitt001.KafkaTvStationAssigner.Assigner;
 import de.fhdortmund.tiitt001.KafkaTvStationsAssigner.TvStationTweet;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.joda.time.DateTime;
 

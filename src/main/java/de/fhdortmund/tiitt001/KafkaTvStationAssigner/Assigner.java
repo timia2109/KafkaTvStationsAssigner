@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * prüft diese gegen die definierten Aliase
  * und schiebt die weiter in einen anderen Stream
  */
-public class Assigner implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationTweet>> {
+public class Assigner implements IStreamWorker, Transformer<String, Status, KeyValue<Long, TvStationTweet>> {
 
     /**
      * Serienhashtag => Senderhashtag
@@ -53,7 +53,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
      * @return
      */
     @Override
-    public KeyValue<String, TvStationTweet> transform(String key, Status value) {
+    public KeyValue<Long, TvStationTweet> transform(String key, Status value) {
         HashtagEntity detectedHashtag = null;
         List<HashtagEntity> hashtags = value.getHashtagEntities();
 
@@ -74,7 +74,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
             message.setTvStation(mappedHashtags.get(detectedHashtag.getText()));
             message.setUsername(value.getUser().getName());
 
-            return new KeyValue<>("", message);
+            return new KeyValue<>(value.getId(), message);
         }
 
         return null;
@@ -87,7 +87,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
         String outputTopicName = envProps.getProperty("tvstations.topic.name");
 
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
-        tweetsStream.transform(()->this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
+        tweetsStream.transform(()->this).to(outputTopicName, Produced.with(Serdes.Long(), moduleSerdes(envProps)));
 
         KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
         aliasesStream.foreach(this::handleAlias);
@@ -102,7 +102,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
         };
     }
 
-    private SpecificAvroSerde<TvStationTweet> moduleSerdes(Properties envProps) {
+    public static SpecificAvroSerde<TvStationTweet> moduleSerdes(Properties envProps) {
         SpecificAvroSerde<TvStationTweet> avroSerde = new SpecificAvroSerde<>();
 
         final HashMap<String, String> serdeConfig = new HashMap<>();
