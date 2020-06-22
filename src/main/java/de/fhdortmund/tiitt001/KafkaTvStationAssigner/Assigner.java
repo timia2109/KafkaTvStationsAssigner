@@ -10,7 +10,6 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
@@ -35,21 +34,22 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
 
     /**
      * Handler für Aliase, welche von einem anderen Modul erkannt werden
-     * @param key Key des Aliases
+     *
+     * @param key   Key des Aliases
      * @param alias Wertinformationen zum Alias
      */
     public void handleAlias(String key, TvStationAlias alias) {
         if (alias.getIsValid()) {
             mappedHashtags.put(key, alias.getTvStation());
-        }
-        else {
+        } else {
             mappedHashtags.remove(key);
         }
     }
 
     /**
      * Transformiert einen Tweet
-     * @param key Immer null
+     *
+     * @param key   Immer null
      * @param value Tweet
      * @return
      */
@@ -65,6 +65,12 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
                     break;
                 }
             }
+        }
+
+        String tweetLanguage = value.getLang();
+        // Sprachfilter (damit nur deutsche Tweets erkannt werden)
+        if (tweetLanguage != null && !tweetLanguage.contains("de") && !tweetLanguage.contains("und")) {
+            return null;
         }
 
         if (detectedHashtag != null) {
@@ -88,7 +94,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
         String outputTopicName = envProps.getProperty("tvstations.topic.name");
 
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
-        tweetsStream.transform(()->this).to(outputTopicName, Produced.with(Serdes.Long(), moduleSerdes(envProps)));
+        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.Long(), moduleSerdes(envProps)));
 
         KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
         aliasesStream.foreach(this::handleAlias);
@@ -115,8 +121,10 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
     }
 
     @Override
-    public void init(ProcessorContext context) { }
+    public void init(ProcessorContext context) {
+    }
 
     @Override
-    public void close() { }
+    public void close() {
+    }
 }
