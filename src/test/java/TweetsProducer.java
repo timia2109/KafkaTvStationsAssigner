@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 
 public class TweetsProducer {
 
@@ -46,7 +47,7 @@ public class TweetsProducer {
 
     public static void main(String[] args) throws Exception {
         Properties envProps = Starter.loadEnvProperties("configuration/dev.properties");
-        Properties producerProps = Starter.buildStreamsProperties(envProps);
+        Properties producerProps = Starter.buildStreamsProperties(envProps, "mocker");
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.ACKS_CONFIG, "0");
@@ -56,10 +57,11 @@ public class TweetsProducer {
         producerProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432");
 
         Producer<String, Status> producer = new KafkaProducer<>(producerProps);
+        Random random = new Random();
 
         while (true) {
             try {
-                producer.send(new ProducerRecord<>(envProps.getProperty("tweets.topic.name"), "", getMockStatus()));
+                producer.send(new ProducerRecord<>(envProps.getProperty("tweets.topic.name"), random.nextLong()+"", getMockStatus()));
                 Thread.sleep(1000);
             } catch (Exception e) {
                 e.printStackTrace();

@@ -8,7 +8,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.joda.time.DateTime;
 
 import java.sql.*;
 import java.util.Properties;
@@ -17,7 +16,7 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
 
     private Connection connection;
 
-    public void handleTvStationAssignment(String key, TvStationTweet tvStationTweet) {
+    public void handleTvStationAssignment(Long key, TvStationTweet tvStationTweet) {
         try {
             PreparedStatement ps = connection.prepareStatement("INSERT INTO Entry (tv_station, createdAt, content, username) VALUES (?,?,?,?)");
             ps.setString(1, tvStationTweet.getTvStation());
@@ -33,7 +32,10 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
 
     @Override
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
-        KStream<String, TvStationTweet> tweetsStream = streamsBuilder.stream(envProps.getProperty("tvstations.topic.name"));
+        KStream<Long, TvStationTweet> tweetsStream = streamsBuilder.stream(envProps.getProperty("tvstations.topic.name"), Consumed.with(
+                Serdes.Long(),
+                Assigner.moduleSerdes(envProps)
+        ));
         tweetsStream.foreach(this::handleTvStationAssignment);
 
         try {
