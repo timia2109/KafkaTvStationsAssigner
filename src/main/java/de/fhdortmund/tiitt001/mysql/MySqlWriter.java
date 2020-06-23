@@ -15,9 +15,20 @@ import java.util.Properties;
 public class MySqlWriter implements IStreamWorker, IDisposable {
 
     private Connection connection;
+    private Properties envProps;
+
+    private synchronized void connect() throws SQLException{
+        connection = DriverManager.getConnection(envProps.getProperty("mysql.connection"));
+        connection.setAutoCommit(true);
+    }
 
     public void handleTvStationAssignment(Long key, TvStationTweet tvStationTweet) {
         try {
+            while (connection == null || connection.isClosed()) {
+                System.out.println("Reconnecting...");
+                connect();
+            }
+
             PreparedStatement ps = connection.prepareStatement("INSERT INTO Entry (tv_station, createdAt, content, username) VALUES (?,?,?,?)");
             ps.setString(1, tvStationTweet.getTvStation());
             ps.setTimestamp(2, new Timestamp(tvStationTweet.getCreatedAt().getMillis()));
@@ -40,8 +51,8 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver").newInstance();
-
-            connection = DriverManager.getConnection(envProps.getProperty("mysql.connection"));
+            this.envProps = envProps;
+            connect();
         } catch (SQLException ex) {
             // handle any errors
             System.err.println("SQLException: " + ex.getMessage());
