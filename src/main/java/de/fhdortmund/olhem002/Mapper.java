@@ -15,13 +15,15 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import de.fhdortmund.tiitt001.*;
+import de.fhdortmund.core.*;
+import de.fhdortmund.tiitt001.KafkaTvStationAssigner.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Assigner implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationTweet>> {
+public class Mapper implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationAlias>> {
 
     private ConcurrentHashMap<String, String> hashes;
     private ConcurrentHashMap<String, String> mappedHashtags;
@@ -78,6 +80,31 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
                     return null;
                 }
             }
+        }
+        return null;
+    }
+    @Override
+    public void init(ProcessorContext context) { }
+
+    @Override
+    public void close() { }
+
+    private SpecificAvroSerde<TvStationAlias> moduleSerdes(Properties envProps) {
+        SpecificAvroSerde<TvStationAlias> avroSerde = new SpecificAvroSerde<>();
+
+        final HashMap<String, String> serdeConfig = new HashMap<>();
+        serdeConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                envProps.getProperty("schema.registry.url"));
+
+        avroSerde.configure(serdeConfig, false);
+        return avroSerde;
+    }
+    public void handleAlias(String key, TvStationAlias alias) {
+        if (alias.getIsValid()) {
+            mappedHashtags.put(key, alias.getTvStation());
+        }
+        else {
+            mappedHashtags.remove(key);
         }
     }
 }
