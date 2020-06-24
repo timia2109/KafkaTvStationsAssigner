@@ -23,12 +23,11 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
     }
 
     public void handleTvStationAssignment(Long key, TvStationTweet tvStationTweet) {
-        try {
-            while (connection == null || connection.isClosed()) {
-                System.out.println("Reconnecting...");
-                connect();
-            }
+        insertToMySql(tvStationTweet, 0);
+    }
 
+    private void insertToMySql(TvStationTweet tvStationTweet, int runId) {
+        try {
             PreparedStatement ps = connection.prepareStatement("INSERT INTO Entry (tv_station, createdAt, content, username) VALUES (?,?,?,?)");
             ps.setString(1, tvStationTweet.getTvStation());
             ps.setTimestamp(2, new Timestamp(tvStationTweet.getCreatedAt().getMillis()));
@@ -36,8 +35,21 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
             ps.setString(4, tvStationTweet.getUsername());
             ps.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("Fehler beim Einfügen in Datenbank");
-            e.printStackTrace();
+            if (runId < 10 && (e.getMessage().contains("not received any packets") || e.getMessage().contains("Can not read response from server"))) {
+                try {
+                    connect();
+                    insertToMySql(tvStationTweet, ++runId);
+                } catch (SQLException ex) {
+                    System.out.println("Fehler bei Wiederherstellung der Datenbankverbingung");
+                    ex.printStackTrace();
+                    sleep(1000);
+                    insertToMySql(tvStationTweet, ++runId);
+                }
+            }
+            else {
+                System.err.println("Fehler beim Einfügen in Datenbank");
+                e.printStackTrace();
+            }
         }
     }
 
@@ -78,5 +90,11 @@ public class MySqlWriter implements IStreamWorker, IDisposable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void sleep(long mills) {
+        try {
+            Thread.sleep(mills);
+        } catch (Exception ignored) {}
     }
 }
