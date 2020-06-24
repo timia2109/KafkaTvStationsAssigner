@@ -52,7 +52,7 @@ public class Starter {
     public static Properties buildStreamsProperties(Properties envProps, String className) {
         Properties props = new Properties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id")+"-"+className);
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id") + "-" + className);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "service-" + className + "-" + Math.random());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, envProps.getProperty("bootstrap.servers"));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
@@ -109,6 +109,12 @@ public class Starter {
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             throw new IllegalArgumentException("This program takes one argument: the path to an environment configuration file.");
+        }
+
+        // Warten vor Start
+        if (System.getenv("SLEEP") != null) {
+            long number = Long.parseLong(System.getenv("SLEEP"));
+            Thread.sleep(number);
         }
 
         System.out.println("Run Module: " + System.getenv("MODULE"));
