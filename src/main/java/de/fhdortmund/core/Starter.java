@@ -18,6 +18,8 @@ import org.apache.kafka.streams.Topology;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
@@ -49,10 +51,10 @@ public class Starter {
      * @param envProps App Einstellungen
      * @return Kafka Einstellungen
      */
-    public static Properties buildStreamsProperties(Properties envProps, String className) {
+    public static Properties buildStreamsProperties(Properties envProps, String className) throws UnknownHostException {
         Properties props = new Properties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id") + "-" + className);
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id") + "-" + className + "-" + InetAddress.getLocalHost().getHostName());
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "service-" + className + "-" + Math.random());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, envProps.getProperty("bootstrap.servers"));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
