@@ -22,16 +22,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Mapper implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationAlias>> {
 
-    private ConcurrentHashMap<String, String> hashes;
-    private ConcurrentHashMap<String, String> mappedHashtags;
+    private int max = 2;
+    private Set<String> sender;
+    private ConcurrentHashMap<String, Hashtag> hashes;
+    private Hashtag akthashtag;
 
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
         ConfigTools configTools = new ConfigTools(envProps);
 
-        mappedHashtags = new ConcurrentHashMap<>(configTools.getDefaultAliases());
+        sender = configTools.getDefaultAliases().keySet();
         String outputTopicName = envProps.getProperty("tvstations.topic.name");
 
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
@@ -52,32 +57,41 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
 
     @Override
     public KeyValue<String, TvStationAlias> transform(String key, Status value) {
+
         List<HashtagEntity> hashtags = value.getHashtagEntities();
         for (HashtagEntity hashtag : hashtags) {
-            if (mappedHashtags.containsKey(hashtag.getText())) {
+            if (sender.contains(hashtag.getText())) {
                 if (hashes != null) {
                     for (HashtagEntity hash : hashtags) {
-                        if (mappedHashtags.containsKey(hashtag.getText())) {
-                        } else {
-                            if (hashes.containsKey(hashtag.getText())) {
-                                mappedHashtags.put(hash.getText(), hashtag.getText());
-                                hashes.remove(hashtag.getText());
+                        if (hashes.containsKey(hash.getText())) {
+                            akthashtag = hashes.get(hash.getText());
+                            if (akthashtag.count == max) {
+                                akthashtag.count++;
                                 return new KeyValue<>(hash.getText(), new TvStationAlias(hashtag.getText(), true));
-                            } else {
-                                hashes.put(hash.getText(), hashtag.getText());
-                                return null;
+                            } else if (akthashtag.count < max) {
+                                akthashtag.count++;
                             }
-                        }
-                    }
-                } else {
-                    hashes = new ConcurrentHashMap<>();
-                    for (HashtagEntity hash : hashtags) {
-                        if (mappedHashtags.containsKey(hashtag.getText())) {
                         } else {
-                            hashes.put(hash.getText(), hashtag.getText());
+                            akthashtag = new Hashtag();
+                            akthashtag.count = 1;
+                            akthashtag.tag = hash.getText();
+                            akthashtag.sender = hashtag.getText();
+                            hashes.put(hash.getText(), akthashtag);
                         }
                     }
-                    return null;
+                }
+                else{
+                    for (HashtagEntity hash : hashtags) {
+                        if(sender.contains(hash.getText())){ }
+                        else{
+                            hashes = new ConcurrentHashMap<String, Hashtag>();
+                            akthashtag = new Hashtag();
+                            akthashtag.count = 1;
+                            akthashtag.tag = hash.getText();
+                            akthashtag.sender = hashtag.getText();
+                            hashes.put(hash.getText(), akthashtag);
+                        }
+                    }
                 }
             }
         }
@@ -100,11 +114,6 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
         return avroSerde;
     }
     public void handleAlias(String key, TvStationAlias alias) {
-        if (alias.getIsValid()) {
-            mappedHashtags.put(key, alias.getTvStation());
-        }
-        else {
-            mappedHashtags.remove(key);
-        }
+
     }
 }
