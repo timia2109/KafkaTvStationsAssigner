@@ -3,6 +3,7 @@ package de.fhdortmund.tiitt001.KafkaTvStationAssigner;
 import com.github.jcustenborder.kafka.connect.twitter.HashtagEntity;
 import com.github.jcustenborder.kafka.connect.twitter.Status;
 import de.fhdortmund.core.IStreamWorker;
+import de.fhdortmund.core.Starter;
 import de.fhdortmund.olhem002.TvStationAliases.TvStationAlias;
 import de.fhdortmund.tiitt001.KafkaTvStationsAssigner.TvStationTweet;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
@@ -94,7 +95,7 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
         String outputTopicName = envProps.getProperty("tvstations.topic.name");
 
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
-        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.Long(), moduleSerdes(envProps)));
+        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.Long(), Starter.moduleSerdes(envProps)));
 
         KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
         aliasesStream.foreach(this::handleAlias);
@@ -107,17 +108,6 @@ public class Assigner implements IStreamWorker, Transformer<String, Status, KeyV
                 envProps.getProperty("tvstations.topic.name"),
                 envProps.getProperty("tvstationaliases.topic.name")
         };
-    }
-
-    public static SpecificAvroSerde<TvStationTweet> moduleSerdes(Properties envProps) {
-        SpecificAvroSerde<TvStationTweet> avroSerde = new SpecificAvroSerde<>();
-
-        final HashMap<String, String> serdeConfig = new HashMap<>();
-        serdeConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-                envProps.getProperty("schema.registry.url"));
-
-        avroSerde.configure(serdeConfig, false);
-        return avroSerde;
     }
 
     @Override

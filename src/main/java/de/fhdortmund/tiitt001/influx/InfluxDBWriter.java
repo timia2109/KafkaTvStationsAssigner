@@ -2,6 +2,7 @@ package de.fhdortmund.tiitt001.influx;
 
 import de.fhdortmund.core.IDisposable;
 import de.fhdortmund.core.IStreamWorker;
+import de.fhdortmund.core.Starter;
 import de.fhdortmund.tiitt001.KafkaTvStationAssigner.Assigner;
 import de.fhdortmund.tiitt001.KafkaTvStationsAssigner.TvStationTweet;
 import okhttp3.OkHttpClient;
@@ -45,7 +46,7 @@ public class InfluxDBWriter implements IStreamWorker, IDisposable {
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
         KStream<Long, TvStationTweet> tweetsStream = streamsBuilder.stream(envProps.getProperty("tvstations.topic.name"), Consumed.with(
                 Serdes.Long(),
-                Assigner.moduleSerdes(envProps)
+                Starter.moduleSerdes(envProps)
         ));
         tweetsStream.foreach(this::handleTvStationAssignment);
         this.envProps = envProps;

@@ -32,20 +32,16 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
         ConfigTools configTools = new ConfigTools(envProps);
 
         mappedHashtags = new ConcurrentHashMap<>(configTools.getDefaultAliases());
-        String outputTopicName = envProps.getProperty("tvstations.topic.name");
+        String outputTopicName = envProps.getProperty("tvstationaliases.topic.name");
 
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
-        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
-
-        KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
-        aliasesStream.foreach(this::handleAlias);
+        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.String(), Starter.moduleSerdes(envProps)));
     }
 
     @Override
     public String[] getRequiredTopics(Properties envProps) {
         return new String[]{
                 envProps.getProperty("tweets.topic.name"),
-                envProps.getProperty("tvstations.topic.name"),
                 envProps.getProperty("tvstationaliases.topic.name")
         };
     }
@@ -88,23 +84,4 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
 
     @Override
     public void close() { }
-
-    private SpecificAvroSerde<TvStationAlias> moduleSerdes(Properties envProps) {
-        SpecificAvroSerde<TvStationAlias> avroSerde = new SpecificAvroSerde<>();
-
-        final HashMap<String, String> serdeConfig = new HashMap<>();
-        serdeConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-                envProps.getProperty("schema.registry.url"));
-
-        avroSerde.configure(serdeConfig, false);
-        return avroSerde;
-    }
-    public void handleAlias(String key, TvStationAlias alias) {
-        if (alias.getIsValid()) {
-            mappedHashtags.put(key, alias.getTvStation());
-        }
-        else {
-            mappedHashtags.remove(key);
-        }
-    }
 }
