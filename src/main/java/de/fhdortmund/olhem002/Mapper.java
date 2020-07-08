@@ -28,7 +28,7 @@ import java.util.Set;
 
 public class Mapper implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationAlias>> {
 
-    private int max = 2;
+    private int max;
     private Set<String> sender;
     private ConcurrentHashMap<String, Hashtag> hashes;
     private Hashtag akthashtag;
@@ -38,7 +38,7 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
 
         sender = configTools.getDefaultAliases().keySet();
         String outputTopicName = envProps.getProperty("tvstations.topic.name");
-
+        max = Integer.parseInt(envProps.getProperty("hashtag.max"));
         KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
         tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
 
