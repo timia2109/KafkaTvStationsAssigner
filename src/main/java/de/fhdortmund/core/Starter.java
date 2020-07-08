@@ -1,11 +1,13 @@
 package de.fhdortmund.core;
 
+import de.fhdortmund.olhem002.TvStationAliases.TvStationAlias;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.avro.data.TimeConversions;
 import org.apache.avro.specific.SpecificData;
+import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -24,6 +26,24 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class Starter {
+
+    /**
+     * Serde für einen speziellen Typen
+     * @param envProps EnvProps
+     * @param <TySerde> Datentyp
+     * @return Serde
+     */
+    public static <TySerde extends SpecificRecord> SpecificAvroSerde<TySerde> moduleSerdes(Properties envProps) {
+        SpecificAvroSerde<TySerde> avroSerde = new SpecificAvroSerde<TySerde>();
+
+        final HashMap<String, String> serdeConfig = new HashMap<>();
+        serdeConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                envProps.getProperty("schema.registry.url"));
+
+        avroSerde.configure(serdeConfig, false);
+        return avroSerde;
+    }
+
     /**
      * Lädt die Umgebungseinstellungen
      *

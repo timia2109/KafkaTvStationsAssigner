@@ -36,21 +36,16 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
         ConfigTools configTools = new ConfigTools(envProps);
 
-        sender = configTools.getDefaultAliases().keySet();
-        String outputTopicName = envProps.getProperty("tvstations.topic.name");
-        max = Integer.parseInt(envProps.getProperty("hashtag.max"));
-        KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
-        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
 
-        KStream<String, TvStationAlias> aliasesStream = streamsBuilder.stream(envProps.getProperty("tvstationaliases.topic.name"));
-        aliasesStream.foreach(this::handleAlias);
+        sender = configTools.getDefaultAliases().keySet();
+        String outputTopicName = envProps.getProperty("tvstationaliases.topic.name");
+        max = Integer.parseInt(envProps.getProperty("hashtag.max"));
     }
 
     @Override
     public String[] getRequiredTopics(Properties envProps) {
         return new String[]{
                 envProps.getProperty("tweets.topic.name"),
-                envProps.getProperty("tvstations.topic.name"),
                 envProps.getProperty("tvstationaliases.topic.name")
         };
     }
