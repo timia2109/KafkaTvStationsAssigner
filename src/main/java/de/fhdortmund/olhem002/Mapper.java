@@ -26,6 +26,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static de.fhdortmund.core.Starter.moduleSerdes;
+
 public class Mapper implements IStreamWorker, Transformer<String, Status, KeyValue<String, TvStationAlias>> {
 
     private int max;
@@ -36,10 +38,12 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
     public void buildTopology(StreamsBuilder streamsBuilder, Properties envProps) {
         ConfigTools configTools = new ConfigTools(envProps);
 
-
         sender = configTools.getDefaultAliases().keySet();
         String outputTopicName = envProps.getProperty("tvstationaliases.topic.name");
         max = Integer.parseInt(envProps.getProperty("hashtag.max"));
+
+        KStream<String, Status> tweetsStream = streamsBuilder.stream(envProps.getProperty("tweets.topic.name"));
+        tweetsStream.transform(() -> this).to(outputTopicName, Produced.with(Serdes.String(), moduleSerdes(envProps)));
     }
 
     @Override
@@ -97,18 +101,4 @@ public class Mapper implements IStreamWorker, Transformer<String, Status, KeyVal
 
     @Override
     public void close() { }
-
-    private SpecificAvroSerde<TvStationAlias> moduleSerdes(Properties envProps) {
-        SpecificAvroSerde<TvStationAlias> avroSerde = new SpecificAvroSerde<>();
-
-        final HashMap<String, String> serdeConfig = new HashMap<>();
-        serdeConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-                envProps.getProperty("schema.registry.url"));
-
-        avroSerde.configure(serdeConfig, false);
-        return avroSerde;
-    }
-    public void handleAlias(String key, TvStationAlias alias) {
-
-    }
 }
